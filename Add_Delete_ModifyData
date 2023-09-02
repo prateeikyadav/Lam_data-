@@ -1,0 +1,253 @@
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+using System.Security.Cryptography;
+using System.Xml.Linq;
+using System.Text.Json;
+using Newtonsoft.Json;
+
+namespace WebApplication1.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class InterflexLAM : ControllerBase
+    {
+        //private static readonly string[] Summaries = new[]
+        // {
+        // "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+        // };
+
+        private readonly ILogger<InterflexLAM> _logger;
+
+        public InterflexLAM(ILogger<InterflexLAM> logger)
+        {
+            _logger = logger;
+        }
+
+        [HttpGet(Name = "IntEmployee")]
+        public IEnumerable<IntEmployee> Get(string AccessRequest, string Activity, string Roles, string AdditionalDetail)
+        {
+
+            // string? Query_Request = "{\"queryrequest\": {\r\n    \"AccessRequest\": \"LACR07312300026|6731918|90002013|Rahul%20Kamble%20%20%20%20%20|NA|NA|rahul.kamble1@icicibank.com\",\r\n    \"AdditionalDetail\": \"1|173784|BOOMRANG\",\r\n    \"Activity\": \"I\",\r\n    \"Roles\": \"1|Super%20Admin\"\r\n}}";
+            RequestData? request_query1 = new RequestData();
+            request_query1.AccessRequest = AccessRequest;
+            request_query1.Activity = Activity;
+            request_query1.Roles = Roles;
+            request_query1.AdditionalDetail = AdditionalDetail;
+
+    
+            return Enumerable.Range(1, 1).Select(index => new IntEmployee
+            {
+                //queryrequest = Query_Request,
+                Date = DateTime.Now,
+                queryrequest = request_query1
+
+            })
+            .ToArray();
+        }
+
+
+        [HttpPost(Name = "IntEmployee")]
+        public ActionResult<ReplyPostData> Post([FromBody] IntEmployee lamEmpInfo)
+
+        {
+            RequestData? request_query = lamEmpInfo.queryrequest;
+            string currDate = DateTime.Now.ToString();
+
+
+            string filePath = "./file.txt";
+
+            string data1 = "AdditionalDetail: " + request_query.AdditionalDetail + ";" + "Activity : " + request_query.Activity + ";" + "Roles" + request_query.Roles + ";" + "AccessRequest :" + request_query.AccessRequest;
+            string replystring = "";
+
+            if (request_query.Activity == "I")
+            {
+                for (int i = 0; i < int.Parse(request_query.Roles.Split("|")[0]); i++)
+                {
+                    string? action = request_query.Activity;
+                    string? userid = request_query.AccessRequest.Split("|")[2];
+                    string? username = request_query.AccessRequest.Split("|")[3].Replace("%20", " ").Trim();
+                    string? iam_id = request_query.AccessRequest.Split("|")[0];
+                    string? ar_id = request_query.AccessRequest.Split("|")[1];
+                    string? roledesc = $"Create User and Assign Roles IAM_ID:{iam_id}, AR_ID:{ar_id} ";
+                    string? role = request_query.Roles.Split("|")[i + 1].Replace("%20"," ").Trim();
+                    string? location = request_query.AdditionalDetail.Split("|")[2*i+2];
+                    string filedata = "";
+                    filedata = action + "|" + userid + "|" + username + "|" + roledesc + "|" + role + "|" + location;
+                    using (StreamWriter writer = new StreamWriter(filePath, append: true))
+                    {
+                        // writer.WriteLine($"Date: {lamEmpInfo.Date}, Temperature: {lamEmpInfo.TemperatureC}, Summary: {lamEmpInfo.Summary}, value: { value1}" );
+                        writer.WriteLine(currDate +" # " + data1 +" # " + filedata);
+                    }
+                    string filePath1 = "./data1/file2.txt";
+                    using (StreamWriter writer = new StreamWriter(filePath1, append: false))
+                    {
+                        writer.WriteLine(filedata);
+                    }
+                    replystring = "0|Inserted Data";
+
+                }
+
+            }
+            else if (request_query.Activity == "U")
+            {
+                for (int i = 0; i < int.Parse(request_query.Roles.Split("|")[0]); i++)
+                {
+                    string? action = request_query.Activity;
+                    string? userid = request_query.AccessRequest.Split("|")[2];
+                    string? username = request_query.AccessRequest.Split("|")[3].Replace("%20", " ").Trim();
+                    string? iam_id = request_query.AccessRequest.Split("|")[0];
+                    string? ar_id = request_query.AccessRequest.Split("|")[1];
+                    string? roledesc = $"Create User and Assign Roles IAM_ID:{iam_id}, AR_ID:{ar_id}";
+                    string? old_role = request_query.Roles.Split("|")[i + 1].Replace("%20", " ").Trim();
+                    string? old_loc = request_query.AdditionalDetail.Split("|")[3 * (i+1) - 1].Replace("%20", " ").Trim();
+                    string? new_loc = request_query.AdditionalDetail.Split("|")[3*(i+1)].Replace("%20", " ").Trim()  ;
+                    string? new_role = request_query.Roles.Split("|")[i + 2].Replace("%20", " ").Trim();
+                    string filedata = "";
+                    filedata = action + "|" + userid + "|" + username + "|" + roledesc + "|" + old_role + ";" + new_role + "|" + old_loc + ";" + new_loc;
+                    using (StreamWriter writer = new StreamWriter(filePath, append: true))
+                    {
+                        // writer.WriteLine($"Date: {lamEmpInfo.Date}, Temperature: {lamEmpInfo.TemperatureC}, Summary: {lamEmpInfo.Summary}, value: { value1}" );
+                        writer.WriteLine(currDate + " # " + data1 + " # " + filedata);
+                    }
+                    string filePath1 = "./data1/file2.txt";
+                    using (StreamWriter writer = new StreamWriter(filePath1, append: false))
+                    {
+                        writer.WriteLine(filedata);
+                    }
+                    replystring = "0|Modified Data";
+                }
+
+            }
+            else if (request_query.Activity == "D")
+            {
+                string? action = request_query.Activity;
+                string? userid = request_query.AccessRequest.Split("|")[2];
+                string? username = request_query.AccessRequest.Split("|")[3].Replace("%20", " ").Trim();
+                string? iam_id = request_query.AccessRequest.Split("|")[0];
+                string? ar_id = request_query.AccessRequest.Split("|")[1];
+                string? roledesc = $"Create User and Assign Roles IAM_ID:{iam_id}, AR_ID:{ar_id}";
+                string? role = null;
+                string? location = null;
+                string filedata = "";
+                filedata = action + "|" + userid + "|" + username + "|" + roledesc + "|" + role  + "|" + location;
+                using (StreamWriter writer = new StreamWriter(filePath, append: true))
+                {
+                    // writer.WriteLine($"Date: {lamEmpInfo.Date}, Temperature: {lamEmpInfo.TemperatureC}, Summary: {lamEmpInfo.Summary}, value: { value1}" );
+                    writer.WriteLine(currDate + " # " + data1 + " # " + filedata);
+                }
+                string filePath1 = "./data1/file2.txt";
+                using (StreamWriter writer = new StreamWriter(filePath1, append: false))
+                {
+                    writer.WriteLine(filedata);
+                }
+                replystring = "0|Deleted User";
+
+            }
+            else if (request_query.Activity == "DR")
+            {
+                for (int i = 0; i < int.Parse(request_query.Roles.Split("|")[0]); i++)
+                {
+                    string? action = request_query.Activity;
+                    string? userid = request_query.AccessRequest.Split("|")[2];
+                    string? username = request_query.AccessRequest.Split("|")[3].Replace("%20", " ").Trim();
+                    string? iam_id = request_query.AccessRequest.Split("|")[0];
+                    string? ar_id = request_query.AccessRequest.Split("|")[1];
+                    string? roledesc = $"Create User and Assign Roles IAM_ID:{iam_id}, AR_ID:{ar_id}";
+                    string? role = request_query.Roles.Split("|")[i + 1];
+                    string? location = request_query.AccessRequest.Split("|")[5];
+                    string filedata = "";
+                    filedata = action + "|" + userid + "|" + username + "|" + roledesc + "|" + role + "|" + location;
+                    using (StreamWriter writer = new StreamWriter(filePath, append: true))
+                    {
+                        // writer.WriteLine($"Date: {lamEmpInfo.Date}, Temperature: {lamEmpInfo.TemperatureC}, Summary: {lamEmpInfo.Summary}, value: { value1}" );
+                        writer.WriteLine(currDate + " # " + data1 + " # " + filedata);
+                    }
+                    string filePath1 = "./data1/file2.txt";
+                    using (StreamWriter writer = new StreamWriter(filePath1, append: false))
+                    {
+                        writer.WriteLine(filedata);
+                    }
+                    replystring = "0|Deleted Role";
+                }
+
+            }
+
+
+
+
+
+
+            /*
+             IntEmployee response1 = new IntEmployee
+             {
+                 Date = lamEmpInfo.Date,
+                 value = value1,
+                 EName = Name,
+                 EMPID = eid,
+                 EMP_Role = role,
+                 EMP_Location = emp_location,
+                 EMP_AccessGroup = emp_accessgroup,
+                 LAM_Description = lam_description,
+                 EUserID userid
+             };
+             return response1; 
+
+             */
+            ReplyPostData rep1 = new ReplyPostData();
+            rep1.Output = replystring;
+
+            /*string json1 = JsonConvert.SerializeObject(rep1, Formatting.Indented);            
+            return Ok(json1);
+            */
+            return Ok(rep1);
+        }
+    }
+
+    [ApiController]
+    [Route("[controller]")]
+
+    public class WeatherForecastController : ControllerBase
+    {
+        private static readonly string[] Summaries = new[]
+        {
+        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    };
+
+        private readonly ILogger<WeatherForecastController> _logger;
+
+        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        {
+            _logger = logger;
+        }
+
+        [HttpGet(Name = "GetWeatherForecast")]
+        public IEnumerable<WeatherForecast> Get()
+        {
+            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            {
+                Date = DateTime.Now.AddDays(index),
+                value = 10,
+                TemperatureC = Random.Shared.Next(-20, 55),
+
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+            })
+            .ToArray();
+        }
+
+        [HttpPost(Name = "CreateWeatherForecast")]
+        public IEnumerable<WeatherForecast> Post([FromBody] WeatherForecast forecast)
+
+        {
+            int value1 = forecast.value;
+
+            return Enumerable.Range(1, 2).Select(index => new WeatherForecast
+            {
+                Date = DateTime.Now.AddDays(index),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                value = value1,
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+            })
+            .ToArray();
+        }
+    }
+}
